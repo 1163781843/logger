@@ -8,6 +8,7 @@
 
 
 export INSTALL_DIR=/opt/usr
+export CFLAGS="-I./ -g -fPIC -D_GNU_SOURCE"
 
 configure \
 	--prefix=${INSTALL_DIR}

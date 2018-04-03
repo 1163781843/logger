@@ -20,8 +20,6 @@
 
 #include "logger.h"
 
-#define		MAX_SIZE	65535
-
 #define RAII_VAR(vartype, varname, initval, dtor)									\
 	auto void _dtor_ ## varname (vartype *v);										\
 	void _dtor_ ## varname (vartype *v) {											\
@@ -47,7 +45,7 @@ static void system_time(char *sys_tv)
 	struct tm *t = localtime(&tt);
 	struct timeval tv = tv_now();
 
-	snprintf(sys_tv, MAX_SIZE, "[%4d-%02d-%02d %02d:%02d:%02d:%03ld]", t->tm_year+1900,
+	snprintf(sys_tv, 256 - 1, "[%4d-%02d-%02d %02d:%02d:%02d:%03ld]", t->tm_year+1900,
 		t->tm_mon+1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec, tv.tv_usec / 1000);
 }
 
@@ -100,19 +98,20 @@ static int regex_match_file_name(const char *file, char **result)
 
 void __LOG(int level, const char * file, int line, const char * format, ...)
 {
-	RAII_VAR(char *, log_buffer, malloc(sizeof(char) * MAX_SIZE), free);
 	RAII_VAR(char *, sys_tv, malloc(sizeof(char) * 256), free);
+
+	char *log_buffer = NULL;
+	size_t length = 0;
 
 	va_list ap;
 	va_start(ap, format);
-	vsnprintf(log_buffer, MAX_SIZE - 1, format, ap);
+	length = vasprintf(&log_buffer, format, ap);
 	va_end(ap);
 
 	char *file_name = NULL;
 
 	system_time(sys_tv);
 	RAII_VAR(char *, find_file, NULL, free);
-	//regex_match_file_name(file, &find_file);
 
 	if (file) {
 		file_name = strrchr(file, '/');
@@ -142,4 +141,6 @@ void __LOG(int level, const char * file, int line, const char * format, ...)
 
 	fprintf(stderr, "%s %s [%05d]   -- %s:%d  %s\n",
 		sys_tv, level_str, get_tid(), file_name ? ++file_name : file, line, log_buffer);
+
+	log_buffer ? free(log_buffer) : NULL;
 }
